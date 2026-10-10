@@ -2720,31 +2720,40 @@ input,textarea,select{font-size:16px!important;}</style>
     }catch(e){}
   }
 
-  function beep(freq, startAt, dur, vol){
+  let alertOut = null;
+  function out(){
+    if (alertOut) return alertOut;
+    const comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.knee.value = 6; comp.ratio.value = 8; comp.attack.value = 0.002; comp.release.value = 0.2;
+    const master = audioCtx.createGain(); master.gain.value = 1.6;
+    comp.connect(master); master.connect(audioCtx.destination);
+    return alertOut = comp;
+  }
+  function beep(freq, startAt, dur, vol, type){
     if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = freq;
     const t0 = audioCtx.currentTime + startAt;
-    gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(t0); osc.stop(t0 + dur + 0.02);
+    [[1, vol], [2, vol * 0.35]].forEach(([mul, v]) => {   // tono + armónico: suena a campana
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = type || "triangle"; osc.frequency.value = freq * mul;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(v, t0 + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(gain); gain.connect(out());
+      osc.start(t0); osc.stop(t0 + dur + 0.02);
+    });
   }
 
-  // "order" = comanda nova (un to). "call" = taula que truca (dos tons, més insistent).
+  // "order" = comanda nova: timbre de cuina (ding-ding-ding, dues vegades). "call" = taula que truca: més insistent.
   function playAlert(kind){
     if (!soundOn()) return;
     initAudio();
     if (audioCtx && audioCtx.state === "suspended") { try{ audioCtx.resume(); }catch(e){} }
     if (kind === "call"){
-      beep(988, 0, 0.16, 0.22); beep(1319, 0.18, 0.22, 0.22);
-      try{ navigator.vibrate && navigator.vibrate([120, 60, 120]); }catch(e){}
+      [0, 0.32, 0.64, 0.96].forEach((t, i) => beep(i % 2 ? 1175 : 880, t, 0.28, 0.9, "square"));
+      try{ navigator.vibrate && navigator.vibrate([200, 80, 200, 80, 200]); }catch(e){}
     } else {
-      beep(784, 0, 0.18, 0.18);
-      try{ navigator.vibrate && navigator.vibrate(140); }catch(e){}
+      [0, 0.75].forEach(r => { beep(1047, r, 0.5, 0.95); beep(1319, r + 0.16, 0.5, 0.95); beep(1568, r + 0.32, 0.7, 0.95); });
+      try{ navigator.vibrate && navigator.vibrate([250, 100, 250]); }catch(e){}
     }
   }
 
