@@ -2752,8 +2752,9 @@ input,textarea,select{font-size:16px!important;}</style>
       [0, 0.32, 0.64, 0.96].forEach((t, i) => beep(i % 2 ? 1175 : 880, t, 0.28, 0.9, "square"));
       try{ navigator.vibrate && navigator.vibrate([200, 80, 200, 80, 200]); }catch(e){}
     } else {
-      [0, 0.75].forEach(r => { beep(1047, r, 0.5, 0.95); beep(1319, r + 0.16, 0.5, 0.95); beep(1568, r + 0.32, 0.7, 0.95); });
-      try{ navigator.vibrate && navigator.vibrate([250, 100, 250]); }catch(e){}
+      // agudo (1,5-2,6 kHz): es la zona que mejor se oye por encima del ruido de una cocina
+      [0, 0.8, 1.6].forEach(r => { beep(1568, r, 0.45, 1, "square"); beep(2093, r + 0.15, 0.45, 1, "square"); beep(2637, r + 0.3, 0.6, 1, "square"); });
+      try{ navigator.vibrate && navigator.vibrate([300, 100, 300, 100, 300]); }catch(e){}
     }
   }
 
@@ -2786,13 +2787,14 @@ input,textarea,select{font-size:16px!important;}</style>
     document.title = total ? `(${total}) Kaliu · Sala` : "Kaliu";
 
     if (callNagTimer){ clearInterval(callNagTimer); callNagTimer = null; }
-    if (pendingCalls && state.view === "sala" && state.salaAuth){
+    if ((pendingCalls || newOrders) && state.view === "sala" && state.salaAuth){
       callNagTimer = setInterval(()=>{
-        if (!lastCalls.some(c=>!c.atendida) || state.view !== "sala"){
+        const calls = lastCalls.some(c=>!c.atendida), orders = lastOrders.some(o=>o.estado==="nuevo");
+        if ((!calls && !orders) || state.view !== "sala"){
           clearInterval(callNagTimer); callNagTimer = null; return;
         }
-        playAlert("call");
-      }, 30000);
+        playAlert(calls ? "call" : "order");
+      }, 15000);
     }
   }
 
